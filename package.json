@@ -1,0 +1,16 @@
+{
+  "name": "ui-dissect",
+  "version": "0.1.0",
+  "description": "Hover-based UI reverse-engineering extension for extracting modern styling and aesthetic DNA.",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.270",
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.4"
+  }
+}
