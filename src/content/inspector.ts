@@ -1,4 +1,4 @@
-import type { DissectedComponent, InspectorState } from '../types';
+import type { DissectedComponent, InspectorState, AestheticStyles, AestheticClassification } from '../types';
 import { isDissectElement } from './dom';
 import { extractAestheticStyles } from './extractor/computed';
 import { extractCssVariables } from './extractor/variables';
@@ -18,7 +18,6 @@ export class DOMInspector {
   private currentElement: HTMLElement | null = null;
   private hierarchyStack: HTMLElement[] = [];
   private hierarchyIndex = 0;
-  private rafId: number | null = null;
 
   public isActive(): boolean {
     return this.active;
@@ -58,8 +57,18 @@ export class DOMInspector {
   }
 
   public toggleFreeze(): void {
-    if (!this.active || !this.currentElement) return;
+    if (!this.active) return;
+    if (!this.currentElement) {
+      const el = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+      if (el instanceof HTMLElement && !isDissectElement(el)) {
+        this.currentElement = el;
+      } else {
+        return;
+      }
+    }
     const isFrozen = this.freezer.toggle();
+    const rect = this.currentElement.getBoundingClientRect();
+    this.hud?.updateHighlight(rect, isFrozen);
     this.dissect(this.currentElement, isFrozen);
     this.notifyState();
   }
@@ -70,6 +79,8 @@ export class DOMInspector {
       this.hierarchyIndex++;
       const el = this.hierarchyStack[this.hierarchyIndex];
       this.currentElement = el;
+      const rect = el.getBoundingClientRect();
+      this.hud?.updateHighlight(rect, this.freezer.isFrozen());
       this.dissect(el, this.freezer.isFrozen());
     }
   }
@@ -80,6 +91,8 @@ export class DOMInspector {
       this.hierarchyIndex--;
       const el = this.hierarchyStack[this.hierarchyIndex];
       this.currentElement = el;
+      const rect = el.getBoundingClientRect();
+      this.hud?.updateHighlight(rect, this.freezer.isFrozen());
       this.dissect(el, this.freezer.isFrozen());
     }
   }
@@ -91,41 +104,38 @@ export class DOMInspector {
   private handleMouseMove = (e: MouseEvent) => {
     if (!this.active || this.freezer.isFrozen()) return;
 
-    if (this.rafId) cancelAnimationFrame(this.rafId);
-    this.rafId = requestAnimationFrame(() => {
-      try {
-        const path = e.composedPath ? e.composedPath() : [];
-        let target: HTMLElement | null = null;
+    let target: HTMLElement | null = null;
+    const path = e.composedPath ? e.composedPath() : [];
 
-        for (const node of path) {
-          if (node instanceof HTMLElement) {
-            if (isDissectElement(node)) {
-              return;
-            }
-            if (node !== document.body && node !== document.documentElement) {
-              target = node;
-              break;
-            }
-          }
-        }
-
-        if (!target && e.target instanceof HTMLElement) {
-          if (!isDissectElement(e.target) && e.target !== document.body && e.target !== document.documentElement) {
-            target = e.target;
-          }
-        }
-
-        if (!target || target === this.currentElement) {
+    for (const node of path) {
+      if (node instanceof HTMLElement) {
+        if (isDissectElement(node)) {
           return;
         }
-
-        this.currentElement = target;
-        this.buildHierarchy(target);
-        this.dissect(target, false);
-      } catch (err) {
-        console.error('[UI Dissect] Mouse hover error:', err);
+        if (node !== document.body && node !== document.documentElement) {
+          target = node;
+          break;
+        }
       }
-    });
+    }
+
+    if (!target && e.target instanceof HTMLElement) {
+      if (!isDissectElement(e.target) && e.target !== document.body && e.target !== document.documentElement) {
+        target = e.target;
+      }
+    }
+
+    if (!target || target === this.currentElement) {
+      return;
+    }
+
+    this.currentElement = target;
+
+    const rect = target.getBoundingClientRect();
+    this.hud?.updateHighlight(rect, false);
+
+    this.buildHierarchy(target);
+    this.dissect(target, false);
   };
 
   private buildHierarchy(el: HTMLElement) {
@@ -143,15 +153,69 @@ export class DOMInspector {
   private dissect(el: HTMLElement, isFrozen: boolean) {
     try {
       const rect = el.getBoundingClientRect();
-      const styles = extractAestheticStyles(el);
-      const pseudo = extractPseudoElements(el);
-      const parentBg = extractParentBackdrop(el);
-      const tokens = extractCssVariables(el);
-      const classification = classifyAesthetic(styles, pseudo);
+      
+      let styles: AestheticStyles;
+      try {
+        styles = extractAestheticStyles(el);
+      } catch (e) {
+        console.warn('[UI Dissect] extractAestheticStyles error:', e);
+        styles = {} as any;
+      }
+
+      let pseudo = { before: null, after: null };
+      try {
+        pseudo = extractPseudoElements(el);
+      } catch (e) {
+        console.warn('[UI Dissect] extractPseudoElements error:', e);
+      }
+
+      let parentBg = '#0a0d14';
+      try {
+        parentBg = extractParentBackdrop(el);
+      } catch (e) {
+        console.warn('[UI Dissect] extractParentBackdrop error:', e);
+      }
+
+      let tokens: Record<string, string> = {};
+      try {
+        tokens = extractCssVariables(el);
+      } catch (e) {
+        console.warn('[UI Dissect] extractCssVariables error:', e);
+      }
+
+      let classification: AestheticClassification;
+      try {
+        classification = classifyAesthetic(styles, pseudo);
+      } catch (e) {
+        console.warn('[UI Dissect] classifyAesthetic error:', e);
+        classification = {
+          category: 'minimalist-flat',
+          title: '✦ Modern Component',
+          confidence: 0.8,
+          traits: ['Clean Layout', 'Direct Styling']
+        };
+      }
 
       const className = el.className && typeof el.className === 'string'
         ? el.className.trim().split(/\s+/)[0] || 'dissected-component'
         : 'dissected-component';
+
+      let cssCode = '';
+      try {
+        cssCode = generateCss(className, styles, pseudo);
+      } catch (e) {
+        console.warn('[UI Dissect] generateCss error:', e);
+        const comp = window.getComputedStyle(el);
+        cssCode = `.${className} {\n  background: ${comp.backgroundColor};\n  color:${comp.color};\n  border-radius: ${comp.borderRadius};\n  box-shadow:${comp.boxShadow};\n}`;
+      }
+
+      let twCode = '';
+      try {
+        twCode = generateTailwind(styles);
+      } catch (e) {
+        console.warn('[UI Dissect] generateTailwind error:', e);
+        twCode = '/* Tailwind utility generation error */';
+      }
 
       const component: DissectedComponent = {
         tagName: el.tagName || 'DIV',
@@ -168,17 +232,26 @@ export class DOMInspector {
         pseudo,
         parentBackground: parentBg,
         code: {
-          css: generateCss(className, styles, pseudo),
-          tailwind: generateTailwind(styles),
+          css: cssCode,
+          tailwind: twCode,
           react: '',
           tokens
         }
       };
 
-      component.code.react = generateReactComponent(component);
+      try {
+        component.code.react = generateReactComponent(component);
+      } catch (e) {
+        console.warn('[UI Dissect] generateReactComponent error:', e);
+        component.code.react = `// React Component\nexport function ${className}() {\n  return <div className="${twCode}">...</div>;\n}`;
+      }
+
       this.hud?.render(component, isFrozen);
-    } catch (err) {
+    } catch (err: any) {
       console.error('[UI Dissect] Dissect error:', err);
+      if (isFrozen) {
+        this.hud?.renderFallback(el, err);
+      }
     }
   }
 
@@ -188,7 +261,6 @@ export class DOMInspector {
 
   private unbindEvents() {
     window.removeEventListener('mousemove', this.handleMouseMove, true);
-    if (this.rafId) cancelAnimationFrame(this.rafId);
   }
 
   private notifyState() {

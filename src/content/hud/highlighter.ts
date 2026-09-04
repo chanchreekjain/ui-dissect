@@ -10,11 +10,11 @@ export class Highlighter {
     this.box.style.borderRadius = '4px';
     this.box.style.zIndex = '2147483646';
     this.box.style.display = 'none';
-    this.box.style.transition = 'top 0.04s ease-out, left 0.04s ease-out, width 0.04s ease-out, height 0.04s ease-out';
+    this.box.style.transition = 'all 0.04s ease-out';
     shadowRoot.appendChild(this.box);
   }
 
-  public update(rect: DOMRect, isFrozen: boolean) {
+  public update(rect: { top: number; left: number; width: number; height: number }, isFrozen: boolean) {
     this.box.style.display = 'block';
     this.box.style.top = `${rect.top}px`;
     this.box.style.left = `${rect.left}px`;
@@ -23,12 +23,12 @@ export class Highlighter {
 
     if (isFrozen) {
       this.box.style.border = '2px solid #38bdf8';
-      this.box.style.background = 'rgba(56, 189, 248, 0.18)';
-      this.box.style.boxShadow = '0 0 25px rgba(56, 189, 248, 0.8), inset 0 0 15px rgba(56, 189, 248, 0.2)';
+      this.box.style.background = 'rgba(56, 189, 248, 0.25)';
+      this.box.style.boxShadow = '0 0 25px rgba(56, 189, 248, 0.9), inset 0 0 15px rgba(56, 189, 248, 0.3)';
     } else {
       this.box.style.border = '2px solid #6366f1';
-      this.box.style.background = 'rgba(99, 102, 241, 0.14)';
-      this.box.style.boxShadow = '0 0 18px rgba(99, 102, 241, 0.7), inset 0 0 10px rgba(99, 102, 241, 0.15)';
+      this.box.style.background = 'rgba(99, 102, 241, 0.2)';
+      this.box.style.boxShadow = '0 0 20px rgba(99, 102, 241, 0.9), inset 0 0 10px rgba(99, 102, 241, 0.25)';
     }
   }
 

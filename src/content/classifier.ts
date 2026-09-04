@@ -6,16 +6,25 @@ export function classifyAesthetic(
 ): AestheticClassification {
   const traits: string[] = [];
 
+  const backdrop = styles.backdropFilter || '';
+  const bgCol = styles.backgroundColor || '';
+  const bgImg = styles.backgroundImage || '';
+  const bColor = styles.border?.color || '';
+  const bWidth = styles.border?.width || '0px';
+  const shadow = styles.boxShadow || '';
+  const font = styles.typography?.fontFamily || '';
+  const tShadow = styles.typography?.textShadow || '';
+
   // 1. Glassmorphism Detection
-  const hasBackdropBlur = Boolean(styles.backdropFilter && styles.backdropFilter.includes('blur'));
-  const isTranslucentBg = styles.backgroundColor.includes('rgba') && !styles.backgroundColor.includes(', 1)');
-  const hasSubtleBorder = styles.border.width !== '0px' && styles.border.color.includes('rgba');
+  const hasBackdropBlur = backdrop.includes('blur');
+  const isTranslucentBg = bgCol.includes('rgba') && !bgCol.includes(', 1)');
+  const hasSubtleBorder = bWidth !== '0px' && bColor.includes('rgba');
 
   if (hasBackdropBlur || (isTranslucentBg && hasSubtleBorder)) {
     if (hasBackdropBlur) traits.push('Backdrop Blur');
     if (isTranslucentBg) traits.push('Translucent Glass Fill');
     if (hasSubtleBorder) traits.push('Specular Rim Border');
-    if (styles.boxShadow) traits.push('Diffused Depth Shadow');
+    if (shadow) traits.push('Diffused Depth Shadow');
 
     return {
       category: 'glassmorphism',
@@ -26,12 +35,12 @@ export function classifyAesthetic(
   }
 
   // 2. Cyberpunk / Mission-Control HUD Detection
-  const isMonospace = /mono|code|consolas|fira|jetbrains/i.test(styles.typography.fontFamily);
+  const isMonospace = /mono|code|consolas|fira|jetbrains/i.test(font);
   const hasNeonGlow =
-    /rgba?\(\s*(?:0|5[0-9]|1[0-9]{2}|255)\s*,\s*(?:255|200)\s*,\s*(?:255|100)/i.test(styles.boxShadow || '') ||
-    /rgba?\(\s*(?:0|5[0-9]|1[0-9]{2}|255)\s*,\s*(?:255|200)\s*,\s*(?:255|100)/i.test(styles.typography.textShadow || '');
+    /rgba?\(\s*(?:0|5[0-9]|1[0-9]{2}|255)\s*,\s*(?:255|200)\s*,\s*(?:255|100)/i.test(shadow) ||
+    /rgba?\(\s*(?:0|5[0-9]|1[0-9]{2}|255)\s*,\s*(?:255|200)\s*,\s*(?:255|100)/i.test(tShadow);
   const hasClipPath = Boolean(styles.clipPath);
-  const hasHudPseudo = Boolean(pseudo.before?.styles.boxShadow || pseudo.after?.styles.boxShadow || pseudo.before?.styles.clipPath);
+  const hasHudPseudo = Boolean(pseudo.before?.styles?.boxShadow || pseudo.after?.styles?.boxShadow || pseudo.before?.styles?.clipPath);
 
   if (hasNeonGlow || (isMonospace && (hasClipPath || hasHudPseudo))) {
     if (hasNeonGlow) traits.push('Photonic Neon Glow');
@@ -48,10 +57,10 @@ export function classifyAesthetic(
   }
 
   // 3. Radiant Dark Glow Detection
-  const hasAmbientGlow = styles.boxShadow && /rgba?\([^)]+\)\s+(?:0px\s+){1,2}[1-9]/.test(styles.boxShadow);
+  const hasAmbientGlow = shadow && /rgba?\([^)]+\)\s+(?:0px\s+){1,2}[1-9]/.test(shadow);
   if (hasAmbientGlow) {
     traits.push('Radial Aura Glow');
-    if (styles.border.width !== '0px') traits.push('Accent Border');
+    if (bWidth !== '0px') traits.push('Accent Border');
     return {
       category: 'dark-glow',
       title: '✦ Radiant Dark Glow',
@@ -61,8 +70,8 @@ export function classifyAesthetic(
   }
 
   // 4. Neumorphism Detection
-  const hasDualShadow = styles.boxShadow && styles.boxShadow.includes(',') &&
-    (styles.boxShadow.includes('inset') || styles.boxShadow.includes('-'));
+  const hasDualShadow = shadow && shadow.includes(',') &&
+    (shadow.includes('inset') || shadow.includes('-'));
   if (hasDualShadow) {
     traits.push('Bi-directional Shadow');
     traits.push('Surface Emboss');
@@ -75,7 +84,7 @@ export function classifyAesthetic(
   }
 
   // 5. Gradient Mesh
-  if (styles.backgroundImage.includes('gradient')) {
+  if (bgImg.includes('gradient')) {
     traits.push('Multi-stop Gradient');
     return {
       category: 'gradient-mesh',
@@ -87,7 +96,7 @@ export function classifyAesthetic(
 
   // 6. Minimalist Modern
   traits.push('Precision Typography');
-  if (styles.border.width !== '0px') traits.push('Hairline Border');
+  if (bWidth !== '0px') traits.push('Hairline Border');
   return {
     category: 'minimalist-flat',
     title: '✦ Minimalist Modern',
