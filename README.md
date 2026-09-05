@@ -180,7 +180,7 @@ npm run watch
 | `scripting` | Injects the content script into tabs that were already open prior to installing the extension. |
 | `storage` | Saves your default preferred output format (Tailwind vs CSS vs React) locally. |
 
-**Zero Telemetry and 100% Client-Side:** UI Dissect has no remote servers, analytics, or background tracking. Everything runs directly inside your browser.
+**Zero Telemetry & 100% Client-Side:** UI Dissect has no remote servers, analytics, or background tracking. Everything runs directly inside your browser.
 
 ---
 
