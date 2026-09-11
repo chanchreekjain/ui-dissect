@@ -20,7 +20,7 @@ export interface ${componentName}Props {
  */
 export const ${componentName}: React.FC<${componentName}Props> = ({ children, className = '' }) => {
   return (
-    <div className={\`${tw} \\${className}\`}>
+    <div className={\`${tw} \${className}\`}>
       {children ?? <span>${comp.classification.title}</span>}
     </div>
   );
