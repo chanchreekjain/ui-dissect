@@ -23,13 +23,13 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (e.code === 'ArrowUp') {
+  if (e.code === 'ArrowUp' && !isInputFocused()) {
     e.preventDefault();
     e.stopPropagation();
     inspector.navigateUp();
     return;
   }
-  if (e.code === 'ArrowDown') {
+  if (e.code === 'ArrowDown' && !isInputFocused()) {
     e.preventDefault();
     e.stopPropagation();
     inspector.navigateDown();
@@ -46,6 +46,10 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape') {
     e.preventDefault();
     e.stopPropagation();
+    if (isInputFocused()) {
+      (document.activeElement as HTMLElement | null)?.blur();
+      return;
+    }
     if (inspector.getState().isFrozen) {
       inspector.toggleFreeze();
     } else {
@@ -54,13 +58,22 @@ window.addEventListener('keydown', (e) => {
   }
 }, true);
 
+/**
+ * True when a form control has focus -- including the HUD's own sliders and colour
+ * pickers, which live inside a shadow root where document.activeElement only ever
+ * reports the shadow host.
+ */
 function isInputFocused(): boolean {
-  const active = document.activeElement;
+  let active: Element | null = document.activeElement;
+  while (active && active.shadowRoot && active.shadowRoot.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
   if (!active) return false;
   return (
     active.tagName === 'INPUT' ||
     active.tagName === 'TEXTAREA' ||
-    (active as HTMLElement).isContentEditable
+    active.tagName === 'SELECT' ||
+    (active as HTMLElement).isContentEditable === true
   );
 }
 

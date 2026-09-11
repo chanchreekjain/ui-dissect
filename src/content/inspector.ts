@@ -1,4 +1,4 @@
-import type { DissectedComponent, InspectorState, AestheticStyles, AestheticClassification } from '../types';
+import type { DissectedComponent, InspectorState, AestheticStyles, AestheticClassification, PseudoElementStyles } from '../types';
 import { isDissectElement } from './dom';
 import { extractAestheticStyles } from './extractor/computed';
 import { extractCssVariables } from './extractor/variables';
@@ -10,10 +10,13 @@ import { generateTailwind } from './generators/tailwind';
 import { generateReactComponent } from './generators/react';
 import { DissectHUD } from './hud';
 import { StateFreezer } from './freezer';
+import { LiveEditor } from './editor';
 
 export class DOMInspector {
   private active = false;
   private freezer = new StateFreezer();
+  /** Outlives the HUD, so edits stay resettable across inspector toggles. */
+  private editor = new LiveEditor();
   private hud: DissectHUD | null = null;
   private currentElement: HTMLElement | null = null;
   private hierarchyStack: HTMLElement[] = [];
@@ -34,7 +37,8 @@ export class DOMInspector {
   public start(): void {
     if (this.active) return;
     this.active = true;
-    this.hud = new DissectHUD();
+    this.hud = new DissectHUD(this.editor);
+    this.hud.onRefresh = () => this.refresh();
     this.bindEvents();
     this.notifyState();
   }
@@ -101,6 +105,25 @@ export class DOMInspector {
     this.hud?.copyCurrentCode();
   }
 
+  /**
+   * Re-runs extraction on the current element. Called after a live edit so the
+   * generated CSS/Tailwind/React reflect what is actually on screen.
+   */
+  public refresh(): void {
+    if (!this.active || !this.currentElement) return;
+    this.dissect(this.currentElement, this.freezer.isFrozen());
+  }
+
+  /** Reverts every live edit made in this tab. */
+  public resetAllEdits(): void {
+    this.editor.resetAll();
+    this.refresh();
+  }
+
+  public hasEdits(): boolean {
+    return this.editor.editedCount() > 0;
+  }
+
   private handleMouseMove = (e: MouseEvent) => {
     if (!this.active || this.freezer.isFrozen()) return;
 
@@ -162,7 +185,7 @@ export class DOMInspector {
         styles = {} as any;
       }
 
-      let pseudo = { before: null, after: null };
+      let pseudo: { before: PseudoElementStyles | null; after: PseudoElementStyles | null } = { before: null, after: null };
       try {
         pseudo = extractPseudoElements(el);
       } catch (e) {
@@ -246,7 +269,7 @@ export class DOMInspector {
         component.code.react = `// React Component\nexport function ${className}() {\n  return <div className="${twCode}">...</div>;\n}`;
       }
 
-      this.hud?.render(component, isFrozen);
+      this.hud?.render(component, isFrozen, el);
     } catch (err: any) {
       console.error('[UI Dissect] Dissect error:', err);
       if (isFrozen) {
