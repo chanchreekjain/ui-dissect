@@ -4,6 +4,8 @@ Isolate and reverse-engineer modern UI aesthetics on hover — not 400 lines of 
 
 Spot a perfect glassmorphism card, a sleek dark mode toggle, or an intricate mission-control HUD element? Hover over it, press `Space` to freeze the hover state in place, and UI Dissect extracts the exact aesthetic DNA needed to recreate it in your own projects: clean scoped CSS, Tailwind CSS utilities, or a ready-to-use React component.
 
+Since **0.2.0** it also edits. The **Edit** tab turns the read-only HUD into a set of live controls — recolour the element on the real page, watch a WCAG contrast ratio update as you go, then copy the CSS for what you actually landed on.
+
 ---
 
 ## The Problem: The Computed Styles Trap
@@ -44,6 +46,11 @@ Instead, it feeds the target element through a **Style Distillation Pipeline**:
   ├── Modern Tailwind CSS (v3 / v4 arbitrary syntax)
   ├── React / JSX Component
   └── Design Tokens Palette
+        │
+        ▼
+[Live Edit Surface]
+  Temporary inline overrides + WCAG 2.1 contrast verdict
+  (re-enters the pipeline, so exported code matches what you see)
 ```
 
 ### 1. The Freeze Primitive (`Space`)
@@ -70,6 +77,42 @@ UI Dissect mounts its entire interface into a dedicated `#ui-dissect-host` conta
 ### 4. Shadow DOM Piercing
 
 Modern web apps (Lit, Shoelace, Reddit web components) encapsulate internal components inside shadow roots. Simple `document.elementFromPoint` stops at the shadow host. UI Dissect recursively queries `shadowRoot.elementFromPoint` across all open shadow trees to locate the true rendered node.
+
+---
+
+## Live Edit (0.2.0)
+
+Reading styles tells you what a component *is*. It does not tell you whether your own colour pair works. The **Edit** tab closes that gap without leaving the page.
+
+Freeze an element, open **Edit**, and you get direct controls over the properties that actually decide how a component reads:
+
+| Control | What it writes |
+|---|---|
+| Background | `background-color` (colour picker + opacity slider) |
+| Text | `color` |
+| Radius | `border-radius` |
+| Border | `border-color` and `border-width` (forces `border-style: solid` above 0) |
+| Shadow | `box-shadow` blur and opacity, keeping the original offset and hue |
+| Font size | `font-size` |
+
+### The contrast readout
+
+The card in the middle of the pane is the reason this tab exists. It shows the live **WCAG 2.1 contrast ratio** between the element's text and the surface behind it, with **AA** and **AAA** verdicts that flip as you drag a slider. Picking "the best combo" stops being a squint test.
+
+It is honest about what it cannot measure:
+
+- Translucent backgrounds are **alpha-composited over the parent surface** before the ratio is computed, rather than measured as if they were opaque.
+- Large text (≥24px, or ≥18.66px bold) is judged against the 3:1 threshold instead of 4.5:1, and the pane says which rule it applied.
+- If the element sits on a **gradient or image**, the pane says the ratio is not measurable instead of inventing a number.
+- If no opaque surface can be found behind the element, it assumes a white page and labels that assumption.
+
+### How the edits behave
+
+- Overrides are written as **inline styles with `!important`**, so they win over the page's own stylesheets.
+- Everything is **temporary**: a reload wipes it. Nothing is written to disk, storage, or the network.
+- **Reset this element** restores its inline style byte-for-byte, including removing the `style` attribute entirely if it never had one. **Reset all** does the same for every element you touched.
+- Editing a gradient element clears its `background-image` so your colour is actually visible.
+- Leaving the Edit tab **re-runs extraction**, so the CSS, Tailwind, React and token tabs export what is on screen now — not the styles the element shipped with.
 
 ---
 
@@ -117,6 +160,8 @@ ui-dissect/
 │   │   ├── freezer.ts             # Freeze-state primitive
 │   │   ├── classifier.ts          # Aesthetic taxonomy detection algorithms
 │   │   ├── dom.ts                 # Open Shadow DOM traversal and self-exclusion
+│   │   ├── editor.ts              # Temporary inline style overrides and exact reset
+│   │   ├── color.ts               # Colour parsing, alpha compositing, WCAG contrast maths
 │   │   ├── extractor/
 │   │   │   ├── computed.ts        # 300+ computed styles distilled to visual DNA
 │   │   │   ├── variables.ts       # CSS custom property token extraction
@@ -127,11 +172,16 @@ ui-dissect/
 │   │   │   ├── tailwind.ts        # Tailwind CSS utility and arbitrary syntax generator
 │   │   │   └── react.ts           # Functional React component template
 │   │   └── hud/
-│   │       ├── index.ts           # Shadow DOM-isolated floating HUD
+│   │       ├── index.ts           # Shadow DOM-isolated floating HUD and Live Edit pane
 │   │       └── highlighter.ts     # Fixed bounding box overlay
 │   └── popup/
 │       ├── index.html             # Sleek dark-mode extension popup
 │       └── index.ts               # Popup controllers and format preferences
+├── test/
+│   ├── fixture.html               # Glass / low-contrast / gradient test page
+│   ├── edit-pane.spec.mjs         # Freeze, live edits, WCAG maths, exact reset
+│   ├── controls.spec.mjs          # Every Edit control, Reset All, code exports
+│   └── extension.spec.mjs         # Loads dist/ as a real unpacked MV3 extension
 ├── esbuild.config.mjs             # Fast zero-dependency bundler
 ├── package.json
 ├── tsconfig.json
@@ -169,6 +219,23 @@ To watch for changes during development:
 ```bash
 npm run watch
 ```
+
+### Tests
+
+Browser-driven regression tests live in `test/` and run against the built bundle,
+so build first. They need Playwright available:
+
+```bash
+npm run build
+npm test                 # edit pane + controls, via an injected content script
+
+# the extension suite loads dist/ as a real unpacked MV3 extension and needs
+# the fixture served over http rather than file://
+python -m http.server 8099 &
+npm run test:extension
+```
+
+See `test/README.md` for what each suite covers.
 
 ---
 
