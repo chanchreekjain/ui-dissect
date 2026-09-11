@@ -138,6 +138,23 @@ await page.waitForTimeout(150);
 const naCount = await page.locator('#ui-dissect-host .contrast-na').count();
 check('gradient background reports not-measurable', naCount === 1);
 
+// Regression: a translucent card over a gradient that has an opaque colour beneath it.
+// This used to resolve to "assumes white page behind", inverting the verdict on dark pages.
+await page.keyboard.press('Space');
+await page.waitForTimeout(100);
+const tBox = await page.locator('#translucent').boundingBox();
+await page.mouse.move(tBox.x + tBox.width / 2, tBox.y + tBox.height / 2);
+await page.waitForTimeout(150);
+await page.keyboard.press('Space');
+await page.waitForTimeout(200);
+await page.locator('#ui-dissect-host .hud-tab.edit-tab').click();
+await page.waitForTimeout(150);
+const tNote = (await page.locator('#ui-dissect-host .contrast-sub').textContent()) || '';
+const tRatio = parseFloat((await page.locator('#ui-dissect-host .contrast-ratio').textContent()) || '0');
+check('translucent-over-gradient does not assume a white page', !/assumes white/.test(tNote), tNote);
+check('translucent-over-gradient is marked approximate', /gradient behind/.test(tNote), tNote);
+check('ratio resolves against the dark colour beneath the gradient', tRatio > 7, `${tRatio}:1`);
+
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.waitForTimeout(200);

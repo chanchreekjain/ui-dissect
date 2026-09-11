@@ -2,6 +2,7 @@ import type { DissectedComponent } from '../../types';
 import { UI_DISSECT_HOST_ID } from '../dom';
 import { Highlighter } from './highlighter';
 import { LiveEditor } from '../editor';
+import { findBackdropColor } from '../extractor/parent';
 import {
   parseColor,
   toHex,
@@ -590,21 +591,26 @@ export class DissectHUD {
       return `<div class="contrast-na">Contrast not measurable &mdash; this element sits on a gradient or image background.</div>`;
     }
 
-    const parentColor = parseColor(this.currentComponent?.parentBackground || '');
     let assumedWhite = false;
+    let behindGradient = false;
     let backdrop: RGBA;
 
     if (ownBg && ownBg.a >= 1) {
       backdrop = ownBg;
     } else {
-      let under: RGBA;
-      if (parentColor && parentColor.a >= 1) {
-        under = parentColor;
+      // Walk for the nearest OPAQUE ancestor colour. parentBackground on the
+      // component may be a gradient string, which carries no usable colour.
+      const found = findBackdropColor(el);
+      const under = (found.color && parseColor(found.color)) || null;
+      behindGradient = found.behindGradient;
+      let base: RGBA;
+      if (under && under.a >= 1) {
+        base = under;
       } else {
-        under = { r: 255, g: 255, b: 255, a: 1 };
+        base = { r: 255, g: 255, b: 255, a: 1 };
         assumedWhite = true;
       }
-      backdrop = ownBg ? compositeOver(ownBg, under) : under;
+      backdrop = ownBg ? compositeOver(ownBg, base) : base;
     }
 
     const text = textColor.a >= 1 ? textColor : compositeOver(textColor, backdrop);
@@ -617,6 +623,7 @@ export class DissectHUD {
 
     const notes: string[] = [verdict.large ? 'large text (needs 3:1)' : 'normal text (needs 4.5:1)'];
     if (assumedWhite) notes.push('assumes white page behind');
+    else if (behindGradient) notes.push('approx — gradient behind');
     if (!hasOwnText) notes.push('no direct text in this element');
 
     return `

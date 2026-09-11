@@ -9,8 +9,15 @@
     background:#ffffff; color:#bbbbbb; font-size:14px; }
   .grad { margin-top:40px; width:320px; padding:20px; border-radius:12px;
     background:linear-gradient(120deg,#6366f1,#ec4899); color:#fff; font-size:16px; }
+  /* opaque dark colour UNDER a gradient overlay - the case that used to be read as white */
+  .gradwrap { margin-top:40px; width:360px; padding:24px; border-radius:12px;
+    background-color:#101828;
+    background-image:linear-gradient(120deg, rgba(99,102,241,0.30), rgba(0,0,0,0)); }
+  .translucent { padding:18px; border-radius:10px;
+    background:rgba(255,255,255,0.08); color:#c7d2fe; font-size:15px; }
 </style></head><body>
 <div class="glass" id="glass">Glass card with some text inside it</div>
 <div class="lowcontrast" id="low">Low contrast grey on white</div>
 <div class="grad" id="grad">Gradient panel</div>
+<div class="gradwrap" id="gradwrap"><div class="translucent" id="translucent">Translucent card over a gradient</div></div>
 </body></html>
