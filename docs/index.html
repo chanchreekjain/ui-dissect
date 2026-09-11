@@ -87,9 +87,9 @@
 <body>
   <div class="container">
     <h1>Privacy Policy for UI Dissect</h1>
-    <div class="meta">Last updated: September 5, 2026</div>
+    <div class="meta">Last updated: September 11, 2026</div>
 
-    <p>UI Dissect (&ldquo;the extension&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is an open-source browser developer tool designed to inspect and extract visual styling code on hover. We are committed to absolute user privacy and data security.</p>
+    <p>UI Dissect (&ldquo;the extension&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is an open-source browser developer tool designed to inspect, edit and extract visual styling code on hover. We are committed to absolute user privacy and data security.</p>
 
     <h2>1. Zero Data Collection</h2>
     <p>UI Dissect does not collect, record, transmit, sell, or monitor any personal data, user credentials, browsing history, keystrokes, or website contents.</p>
@@ -100,17 +100,26 @@
     <h2>3. Local Storage Usage</h2>
     <p>The extension uses Chrome&rsquo;s local storage API (<code>chrome.storage.local</code>) exclusively to store user-defined interface preferences, such as your default preferred export format (Tailwind CSS, Scoped CSS, or React). This preference data stays on your local device and is never synchronized to external servers.</p>
 
-    <h2>4. Minimal Permissions Justification</h2>
+    <h2>4. Live Edit Changes</h2>
+    <p>The Live Edit feature applies temporary inline style overrides &mdash; colours, border radius, shadow and font size &mdash; to the page you are currently viewing, inside your own browser. These changes are cosmetic and local only.</p>
+    <ul>
+      <li>They are never saved, synchronised, or transmitted to any server.</li>
+      <li>They are discarded the moment the page is reloaded, or when you use the Reset control in the extension&rsquo;s interface.</li>
+      <li>No copy or snapshot of the modified page is created or stored at any point.</li>
+      <li>The page you are viewing is not altered for anyone else, and no change is written back to the website you are visiting.</li>
+    </ul>
+
+    <h2>5. Minimal Permissions Justification</h2>
     <ul>
       <li><code>activeTab</code>: Required solely to read element dimensions and styles on the specific tab you choose to inspect.</li>
       <li><code>scripting</code>: Used only to inject the content script into pre-existing tabs on demand.</li>
       <li><code>storage</code>: Required to persist local tool preferences.</li>
     </ul>
 
-    <h2>5. Third-Party Services & Telemetry</h2>
+    <h2>6. Third-Party Services & Telemetry</h2>
     <p>UI Dissect contains zero third-party trackers, external CDNs, advertising networks, or analytics tools.</p>
 
-    <h2>6. Source Code & Contact</h2>
+    <h2>7. Source Code & Contact</h2>
     <p>UI Dissect is fully open-source. You can inspect the source code or open questions on GitHub at: <a href="https://github.com/chanchreekjain/ui-dissect" target="_blank" rel="noopener">github.com/chanchreekjain/ui-dissect</a>.</p>
   </div>
 </body>
